@@ -1,0 +1,859 @@
+openapi: 3.0.0
+servers:
+  - description: Dev API
+    url: https://dev-integration.arryved.com/api/v1
+  - description: Localhost
+    url: http://localhost:12010/api/v1
+info:
+  description: Arryved Partner APIs
+  version: '1.0.0'
+  title: Arryved Partner APIs
+  contact:
+    email: dieter@arryved.com
+  license:
+    name: Apache 2.0
+    url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
+tags:
+  - name: products
+    description: Product API
+paths:
+  # ********
+  # ACCOUNTING OPERATIONS
+  # ********
+  /accounting/sales:
+    get:
+      tags:
+        - accounting
+      summary: |
+        List all sales (defaults to sales for the prior day unless the optional
+        query param 'date' is supplied)
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - in: query
+          name: date
+          schema:
+            type: string
+            format: date
+          required: false
+          description: |
+            OPTIONAL: The date (YYYY-MM-DD format) to restrict sales to; if not
+            present, will default to yesterday's date
+      responses:
+        '200':
+          description: |
+            Returns a list of all sales for the specific date
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SaleDto'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+  /accounting/sales/{tabId}:
+    get:
+      tags:
+        - accounting
+      summary: |
+        Gets a specific sale by its Arryved running tab id
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - in: path
+          name: tabId
+          schema:
+            type: string
+          required: true
+          description: |
+            REQUIRED: The Arryved running tab id to get the sale data for
+      responses:
+        '200':
+          description: |
+            Returns the specific Sale requested
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SaleDto'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+  # ********
+  # AUTHENTICATION OPERATIONS
+  # ********
+  /authentication/authenticate:
+    post:
+      tags:
+        - authentication
+      summary: |
+        Authenticate
+      security:
+        - ApiKeyAuth: []
+      operationId: authenticate
+      description: |
+        Exchange an integration authentication token for a session token to be included in the X-API header
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthenticateRequest'
+      responses:
+        '200':
+          description: |
+            Returns the session token used for subsequent calls.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthenticateResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+  /authentication/preauth:
+    post:
+      tags:
+        - authentication
+      summary: |
+        Preauth
+      operationId: preauth
+      description: |
+        Request a temporary session authentication token to be included in the X-API header
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PreauthRequest'
+      responses:
+        '200':
+          description: |
+            Returns a preauth temporary token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PreauthResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+  # ********
+  # INVENTORY OPERATIONS
+  # ********
+  /inventory/adjust:
+    post:
+      tags:
+        - inventory
+      summary: |
+        Supplies inventory-on-hand relative adjustment values
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InventoryAdjustDto'
+      responses:
+        '200':
+          description: |
+            the inventory adjustment request was received and processed
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+  # ********
+  # PRODUCT OPERATIONS
+  # ********
+  /products:
+    get:
+      tags:
+        - product
+      summary: |
+        List all products
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: |
+            Returns a list of all products
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProductDto'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+  /products/{productId}:
+    get:
+      tags:
+        - product
+      summary: |
+        Get a product by its identifier
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - in: path
+          name: productId
+          schema:
+            type: string
+          required: true
+          description: Identifier of the product to get
+      responses:
+        '200':
+          description: |
+            Returns the requested product
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductDto'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+components:
+  responses:
+    BadRequestError:
+      description: |
+        HTTP Status Code 400.
+        Request error (request / response validation error, missing data, etc)
+        Also returned when a business logic error occurs
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/BadRequestDto'
+    NotFoundError:
+      description: |
+        HTTP Status Code 404.
+        Requested object does not exist, is not valid, or reqestor doesn't have permission to
+        retrieve (e.g. requesting an object belonging to someone else)
+        Applies to operations that GET or ACT on a single object only.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ResourceNotFoundDto'
+    NotModifiedError:
+      description: |
+        HTTP Status Code 304.
+        Requested object has not been modified since the last time this retrieve operation was
+        called.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ResourceNotModifiedDto'
+    UnauthorizedError:
+      description: |
+        HTTP Status Code 401.
+        API key is missing or invalid.
+        Requestor does not have a token in the X-API-KEY header, the token has expired, the
+        token is invalid, or the token isn't of sufficient authority for the requested operation
+      headers:
+        WWW_Authenticate:
+          schema:
+            type: string
+  schemas:
+    # ********
+    # REQUEST / RESPONSE OBJECTS
+    # ********
+    AuthenticateRequest:
+      type: object
+      required:
+        - requestInfo
+        - auth
+      properties:
+        requestInfo:
+          $ref: '#/components/schemas/RequestInfoDto'
+        auth:
+          $ref: '#/components/schemas/AuthenticationDto'
+    AuthenticateResponse:
+      type: object
+      required:
+        - responseInfo
+        - auth
+      properties:
+        responseInfo:
+          $ref: '#/components/schemas/ResponseInfoDto'
+        auth:
+          $ref: '#/components/schemas/AuthenticationDto'
+    PreauthRequest:
+      type: object
+      required:
+        - requestInfo
+        - preauth
+      properties:
+        requestInfo:
+          $ref: '#/components/schemas/RequestInfoDto'
+        preauth:
+          $ref: '#/components/schemas/PreauthDto'
+    PreauthResponse:
+      type: object
+      required:
+        - responseInfo
+        - preauth
+      properties:
+        responseInfo:
+          $ref: '#/components/schemas/ResponseInfoDto'
+        preauth:
+          $ref: '#/components/schemas/PreauthDto'
+    # ********
+    # DTOs
+    # ********
+    AuthenticationDto:
+      description: |
+        Provides the session token for a given company/auth request
+      required:
+        - companyId
+        - authToken
+      properties:
+        companyId:
+          description: |
+            REQUIRED: the registered company id associated with the token
+          type: string
+          minLength: 8
+          maxLength: 8
+          nullable: false
+          example: ':companyid1'
+        authToken:
+          description: |
+            REQUIRED: the issued authentication token by the server, used to get a session token
+          type: string
+          minLength: 1
+          maxLength: 512
+          nullable: false
+          example: ':authTokenlOyuJ-qy07tmV7hsxxt67GDIrvJL4McexZb_qj6yaFaLInqCrzEdQP4Qplxl_I-gTmGwgCd3iWNA=='
+        sessionToken:
+          description: |
+            AVAILABLE ON RESPONSE: the issued session token by the server
+          type: string
+          minLength: 1
+          maxLength: 512
+          nullable: false
+          readOnly: true
+          example: ':sessionToken-43ter-hkdfodr-0i6455wUquew09r90riewqrie09kqdofjiiepiqyuhgbtyty67456diW2e=='
+    BadRequestDto:
+      description: |
+        Sent back as the Http Status code 400 response, gives details about the request error(s).
+      type: object
+    FeeDto:
+      description: |
+        A single fee name/amount pair
+      required:
+        - name
+        - amount
+      properties:
+        name:
+          description: |
+            REQUIRED: the name of the fee
+          type: string
+          minLength: 1
+          maxLength: 40
+          nullable: false
+          example: 'Service charge'
+        amount:
+          description: |
+            REQUIRED: the amount for this fee (in minor currency units)
+          type: integer
+          nullable: false
+          example: 0
+    InventoryAdjustDto:
+      description: |
+        A collection of relative inventory adjustments to make
+      required:
+        - referenceId
+        - idempotencyKey
+        - entries
+      properties:
+        referenceId:
+          description: |
+            REQUIRED: the third-party id for this adjustment request
+          type: string
+          minLength: 1
+          maxLength: 30
+          nullable: false
+          example: 'H389jshd882h4'
+        idempotencyKey:
+          description: |
+            REQUIRED: the idempotency key for this adjustment request
+            (we suggest using a random UUID in websafe base64 format)
+          type: string
+          minLength: 1
+          maxLength: 36
+          nullable: false
+          example: '7cf21536-8de8-47ca-9373-116938889b31'
+        entries:
+          description: |
+            REQUIRED: the list of adjustments to make associated with the referenceId
+          type: array
+          nullable: false
+          minItems: 0
+          items:
+            $ref: '#/components/schemas/InventoryAdjustEntryDto'
+    InventoryAdjustEntryDto:
+      description: |
+        A a single relative inventory adjustment
+      required:
+        - sku
+        - adjustment
+      properties:
+        sku:
+          description: |
+            REQUIRED: the product SKU to update
+          type: string
+          minLength: 1
+          maxLength: 20
+          nullable: false
+          example: '01/1/123'
+        adjustment:
+          description: |
+            REQUIRED: the relative adjustment to make
+            (negative to reduce inventory on hand, positive to increase)
+          type: integer
+          nullable: false
+          minimum: -9999
+          maximum: 9999
+          example: -1
+    OrderDto:
+      description: |
+        A single order
+      required:
+        - orderId
+        - subtotal
+        - items
+      properties:
+        orderId:
+          description: |
+            REQUIRED: the Arryved order id
+          type: string
+          minLength: 20
+          maxLength: 20
+          nullable: false
+          example: 'A1B2C3D4E5F6G7H8I9J0'
+        subtotal:
+          description: |
+            REQUIRED: the subtotal for this order (includes item-level discounts)
+            (in minor currency units)
+          type: integer
+          nullable: false
+          example: 0
+        items:
+          description: |
+            REQUIRED: the list of associated purchase items
+          type: array
+          nullable: false
+          minItems: 0
+          items:
+            $ref: '#/components/schemas/PurchaseItemDto'
+    PaymentDto:
+      description: |
+        A single payment
+      required:
+        - paymentType
+        - paymentAmount
+        - timestamp
+      properties:
+        paymentType:
+          description: |
+            REQUIRED: the type of this payment
+          type: string
+          minLength: 1
+          maxLength: 40
+          nullable: false
+          example: 'CREDIT_CARD'
+        paymentAmount:
+          description: |
+            REQUIRED: the amount of this payment (in minor currency units)
+          type: integer
+          nullable: false
+          example: 0
+        timestamp:
+          description: |
+            REQUIRED: the date/time of this payment as specified by the location
+          type: string
+          format: date-time
+          nullable: false
+          example: '2021-02-15T17:32:28Z'
+    PreauthDto:
+      # TODO(steve): Add details for what header the token goes into
+      description: |
+        Holds the [networkId] and, on response, the associated preauth [token], which should be
+        used in subsequent calls.
+      type: object
+      required:
+        - networkId
+      properties:
+        networkId:
+          description: |
+            REQUIRED: A network-assigned identifier, either an IMEI number or IP address
+            Note this is NOT the device identifier (UDID)
+          type: string
+          minLength: 1
+          maxLength: 40
+          nullable: false
+          example: ':networkId'
+        token:
+          description: |
+            AVAILABLE ON RESPONSE: Holds the preauth token for this device
+          type: string
+          nullable: false
+          readOnly: true
+          minLength: 1
+          maxLength: 512
+          example: ':authTokenmlOyuJ-qy07tmV7hsxxt67GDIrvJL4McexZb_qj6yaFaLInqCrzEdQP4Qplxl_I-gTmGwgCd3iWNA=='
+    ProductDto:
+      description: |
+        Details for a specific product
+      required:
+        - id
+        - name
+        - sizes
+      properties:
+        id:
+          description: |
+            REQUIRED: the identifer for this product
+          type: string
+          minLength: 16
+          maxLength: 16
+          nullable: false
+          example: '1234567890ABCDEF'
+        name:
+          description: |
+            REQUIRED: the name for this product
+          type: string
+          minLength: 1
+          maxLength: 254
+          nullable: false
+          example: 'Big Belly Burger'
+        sizes:
+          description: |
+            REQUIRED: the sizes for this product
+          type: array
+          nullable: false
+          minItems: 0
+          items:
+            $ref: '#/components/schemas/ProductSizeDto'
+    ProductSizeDto:
+      description: |
+        Details for a specific product size
+      required:
+        - shortForm
+        - name
+      properties:
+        shortForm:
+          description: |
+            REQUIRED: the short-form label for this size
+          type: string
+          minLength: 3
+          maxLength: 3
+          nullable: false
+          example: 'ORD'
+        name:
+          description: |
+            REQUIRED: the name for this size
+          type: string
+          minLength: 1
+          maxLength: 100
+          nullable: false
+          example: 'Order'
+        sku:
+          description: |
+            OPTIONAL: the product SKU for this size
+            (may be null)
+          type: string
+          minLength: 1
+          maxLength: 20
+          nullable: true
+          example: '01/1/123'
+        quantityAvailable:
+          description: |
+            OPTIONAL: quantity available
+            (absent if inventory level is not tracked for this item)
+          type: integer
+          nullable: true
+          example: 57
+    PurchaseItemDto:
+      description: |
+        A single purchase item
+      required:
+        - name
+        - size
+        - type
+        - quantity
+        - price
+        - addedTax
+        - includedTax
+        - discount
+        - isRefund
+      properties:
+        name:
+          description: |
+            REQUIRED: the name of the item purchased
+          type: string
+          minLength: 1
+          maxLength: 256
+          nullable: false
+          example: 'Those Dam Fries'
+        size:
+          description: |
+            REQUIRED: the size of the item purchased
+          type: string
+          minLength: 1
+          maxLength: 40
+          nullable: false
+          example: 'Order'
+        type:
+          description: |
+            REQUIRED: the item type (category) of the item purchased
+          type: string
+          minLength: 1
+          maxLength: 40
+          nullable: false
+          example: 'CREDIT_CARD'
+        quantity:
+          description: |
+            REQUIRED: the quantity of this item purchased (may be fractional)
+            This is always a positive number - refunds/returns are signified through
+            the isRefund property
+          type: number
+          format: double
+          minimum: 0
+          nullable: false
+          example: 1.0
+        price:
+          description: |
+            REQUIRED: the per-unit price for this purchase item
+            (in minor currency units)
+          type: integer
+          minimum: 0
+          nullable: false
+          example: 500
+        addedTax:
+          description: |
+            REQUIRED: the added sales tax for this purchase item
+            (in minor currency units)
+          type: integer
+          minimum: 0
+          nullable: false
+          example: 0
+        includedTax:
+          description: |
+            REQUIRED: the included sales tax for this purchase item
+            (in minor currency units)
+          type: integer
+          minimum: 0
+          nullable: false
+          example: 0
+        discount:
+          description: |
+            REQUIRED: the item-level discount applied to this purchase item
+            (in minor currency units)
+          type: integer
+          minimum: 0
+          nullable: false
+          example: 12
+        isRefund:
+          description: |
+            REQUIRED: true if this item was a refund/return
+          type: boolean
+          nullable: false
+          example: false
+    RequestInfoDto:
+      description: |
+        Records basic details about this specific API request
+      type: object
+      required:
+        - requestId
+        - clientApiVersion
+        - clientName
+        - clientVersion
+      properties:
+        requestId:
+          description: |
+            A value supplied by the client to act as a request identifier and idempotency key
+          type: string
+          minLength: 8
+          maxLength: 32
+          example: ':requestId123456'
+        clientApiVersion:
+          description: |
+            The API version of this client request - used by Arryved for debugging/metrics
+            MUST be in major.minor.patch format
+          type: string
+          example: '1.0.0'
+        clientName:
+          description: |
+            The application name of this client request - used by Arryved for debugging/metrics
+          type: string
+          example: 'Arryved Mobile'
+        clientVersion:
+          description: |
+            The application version of this client request - used by Arryved for debugging/metrics
+          type: string
+          example: '1.2.3'
+    ResponseInfoDto:
+      description: |
+        Reflects the client details for this request, and adds additional server-side details
+        relating to the response.
+      type: object
+      required:
+        - requestInfo
+        - serverApiVersion
+        - serverVersion
+      properties:
+        requestInfo:
+          $ref: '#/components/schemas/RequestInfoDto'
+        serverApiVersion:
+          description: |
+            The API version of the server handling the request - used by Arryved for
+            debugging/metrics
+            MUST be in major.minor.patch format
+          type: string
+          example: '1.0.0'
+        serverVersion:
+          description: |
+            The server version of the server handling the request - used by Arryved for
+            debugging/metrics
+          type: string
+          example: '0.0.1'
+    ResourceNotFoundDto:
+      description: |
+        Sent back as the Http Status code 404 response.
+      type: object
+    ResourceNotModifiedDto:
+      description: |
+        Sent back as the Http Status code 304 response.
+      type: object
+    SaleAmountDetailsDto:
+      description: |
+        Amounts and fees relating to a specific sale (running tab).
+      required:
+        - currencyCode
+        - subtotal
+        - addedTax
+        - includedTax
+      properties:
+        currencyCode:
+          description: |
+            REQUIRED: the 3-letter ISO currency code
+          type: string
+          minLength: 3
+          maxLength: 3
+          nullable: false
+          example: 'USD'
+        subtotal:
+          description: |
+            REQUIRED: the sale subtotal before taxes, fees, tab discounts, and tip
+            (in minor currency units)
+          type: integer
+          minimum: 0
+          nullable: false
+          example: 500
+        addedTax:
+          description: |
+            REQUIRED: the added sales tax for this sale
+            (in minor currency units)
+          type: integer
+          minimum: 0
+          nullable: false
+          example: 0
+        includedTax:
+          description: |
+            REQUIRED: the included sales tax for this sale
+            (in minor currency units)
+          type: integer
+          minimum: 0
+          nullable: false
+          example: 0
+        tip:
+          description: |
+            OPTIONAL: the tip for this sale
+            (in minor currency units)
+          type: integer
+          minimum: 0
+          nullable: true
+          example: 0
+        discount:
+          description: |
+            OPTIONAL: the tab-level discount applied to this sale
+            (in minor currency units)
+          type: integer
+          minimum: 0
+          nullable: true
+          example: 12
+        fees:
+          description: |
+            OPTIONAL: the list of additional fees for this sale
+          type: array
+          nullable: true
+          items:
+            $ref: '#/components/schemas/FeeDto'
+    SaleDto:
+      description: |
+        A single sale (running tab that has been closed out)
+      required:
+        - tabId
+        - timestamp
+        - creationTime
+        - amountDetails
+        - orders
+        - payments
+      properties:
+        tabId:
+          description: |
+            REQUIRED: the Arryved id for this sale (running tab)
+          type: string
+          minLength: 20
+          maxLength: 20
+          nullable: false
+          example: 'A1B2C3D4E5F6G7H8I9J0'
+        timestamp:
+          description: |
+            REQUIRED: the date/time of this payment as specified by the location
+          type: string
+          format: date-time
+          nullable: false
+          example: '2021-02-15T17:32:28Z'
+        creationTime:
+          description: |
+            REQUIRED: the date/time of this payment as recorded by Arryved
+          type: string
+          format: date-time
+          nullable: false
+          example: '2021-02-15T17:32:28Z'
+        amountDetails:
+          $ref: '#/components/schemas/SaleAmountDetailsDto'
+        orders:
+          description: |
+            REQUIRED: the list of orders for this sale
+          type: array
+          minItems: 0
+          nullable: false
+          items:
+            $ref: '#/components/schemas/OrderDto'
+        payments:
+          description: |
+            REQUIRED: the list of payments for this sale
+          type: array
+          minItems: 0
+          nullable: false
+          items:
+            $ref: '#/components/schemas/PaymentDto'
+  # ********
+  # SECURITY schemes
+  # ********
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-KEY
