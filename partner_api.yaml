@@ -1,7 +1,5 @@
 openapi: 3.0.0
 servers:
-  - description: Dev API
-    url: https://dev-integration.arryved.com/api/v1
   - description: Localhost
     url: http://localhost:12010/api/v1
 info:
